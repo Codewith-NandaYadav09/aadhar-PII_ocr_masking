@@ -1,0 +1,6 @@
+tesseract
+pytesseract
+opencv-python
+pdf2image
+Pillow
+regex
