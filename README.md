@@ -64,10 +64,10 @@ The script will:
 ## Examples
 
 ### Input Image
-![Input Example](test/image_7035.jpg)
+![Input Example](test/image_7040.jpg)
 
 ### Output Image
-![Output Example](test_output/image_7035.jpg)
+![Output Example](test_output/image_7040.jpg)
 
 ## Performance
 
