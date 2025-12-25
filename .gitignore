@@ -6,6 +6,7 @@ venv/
 *.pyd
 env/
 .env
+data/
 data/raw/
 data/processed/
 models/
@@ -18,3 +19,4 @@ dist/
 build/
 node_modules/
 *.egg-info/
+TODO.md

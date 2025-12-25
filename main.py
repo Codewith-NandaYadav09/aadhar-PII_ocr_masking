@@ -37,8 +37,8 @@ def process_documents_parallel(input_dir, output_dir, num_processes=None):
     total_time = end_time - start_time
     throughput = len(files) / total_time * 3600  # documents per hour
 
-    print(".2f")
-    print(".2f")
+    print(f"Processed {len(files)} documents in {total_time:.2f} seconds")
+    print(f"Throughput: {throughput:.2f} documents/hour")
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:
