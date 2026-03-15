@@ -4,3 +4,4 @@ opencv-python
 pdf2image
 Pillow
 regex
+kafka-python==2.0.2

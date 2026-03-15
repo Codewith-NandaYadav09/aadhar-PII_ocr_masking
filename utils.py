@@ -253,3 +253,75 @@ def process_document(file_path, output_dir):
     except Exception as e:
         print(f"Error processing document {file_path}: {e}")
         return False
+
+
+# Kafka helpers
+import json
+import time
+from kafka import KafkaProducer, KafkaConsumer
+from kafka_config import BOOTSTRAP_SERVERS, INPUT_TOPIC, PROCESSED_TOPIC
+
+
+def get_producer():
+    """Get configured Kafka producer."""
+    return KafkaProducer(
+        bootstrap_servers=BOOTSTRAP_SERVERS,
+        value_serializer=lambda v: json.dumps(v).encode('utf-8'),
+        retries=3,
+        acks='all'
+    )
+
+
+def get_consumer(topic, group_id):
+    """Get configured Kafka consumer."""
+    return KafkaConsumer(
+        topic,
+        bootstrap_servers=BOOTSTRAP_SERVERS,
+        value_deserializer=lambda m: json.loads(m.decode('utf-8')),
+        group_id=group_id,
+        auto_offset_reset='earliest',
+        enable_auto_commit=True
+    )
+
+
+def send_document_path(file_path):
+    """Producer: Send document path to input topic."""
+    producer = get_producer()
+    message = {
+        'file_path': file_path,
+        'timestamp': time.time()
+    }
+    producer.send(INPUT_TOPIC, value=message)
+    producer.flush()
+    producer.close()
+
+
+def process_kafka_document(output_dir):
+    """Consumer callback: Process from input topic, send results."""
+    consumer = get_consumer(INPUT_TOPIC, 'document-processors')
+    
+    producer = get_producer()
+    
+    try:
+        for message in consumer:
+            data = message.value
+            file_path = data['file_path']
+            
+            success = process_document(file_path, output_dir)
+            
+            result = {
+                'file_path': file_path,
+                'output_dir': output_dir,
+                'success': success,
+                'timestamp': time.time()
+            }
+            
+            producer.send(PROCESSED_TOPIC, value=result)
+            producer.flush()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        producer.close()
+        consumer.close()
+
+

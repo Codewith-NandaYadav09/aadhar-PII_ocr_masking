@@ -44,9 +44,22 @@ This creates sample documents with embedded Aadhaar numbers in the `sample_docum
 
 ### Run the Application
 
-Process documents:
+**Direct Mode** (original):
 ```
 python main.py <input_directory> <output_directory>
+```
+
+**Kafka Mode** (new - scalable):
+Requires local Kafka at localhost:9092 (Docker below).
+```
+python main.py test/ test_output_kafka/ --kafka --num-producers=2 --num-consumers=8
+```
+- Producers send file paths to 'input-documents' topic.
+- Consumers process Aadhaar masking, send results to 'processed-documents'.
+
+**Local Kafka Setup** (Docker):
+```
+docker run -d --name kafka -p 9092:9092 -e KAFKA_NODE_ID=1 -e KAFKA_PROCESS_ROLES=broker,controller -e KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT -e KAFKA_LISTENERS=PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093 -e KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://localhost:9092 -e KAFKA_INTER_BROKER_LISTENER_NAME=PLAINTEXT -e KAFKA_CONTROLLER_QUORUM_VOTERS=1@localhost:9093 -e KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1 confluentinc/cp-kafka:7.7.0
 ```
 
 Example:

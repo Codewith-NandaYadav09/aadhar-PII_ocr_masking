@@ -40,12 +40,64 @@ def process_documents_parallel(input_dir, output_dir, num_processes=None):
     print(f"Processed {len(files)} documents in {total_time:.2f} seconds")
     print(f"Throughput: {throughput:.2f} documents/hour")
 
+def scan_and_produce(input_dir):
+    """Producer process: Scan dir and send paths to Kafka."""
+    supported_extensions = ['.jpg', '.jpeg', '.png', '.pdf']
+    files = []
+    for ext in supported_extensions:
+        files.extend(Path(input_dir).glob(f'**/*{ext}'))
+    
+    print(f"Producer found {len(files)} documents to send.")
+    
+    for file in files:
+        from utils import send_document_path
+        send_document_path(str(file))
+
+
+def run_kafka_pipeline(input_dir, output_dir, num_producers=2, num_consumers=8):
+    """Run Kafka-based pipeline with multiprocessing producers/consumers."""
+    from multiprocessing import Process
+    from utils import process_kafka_document
+    import os
+    os.makedirs(output_dir, exist_ok=True)
+    
+    processes = []
+    
+    # Start producers
+    for _ in range(num_producers):
+        p = Process(target=scan_and_produce, args=(input_dir,))
+        p.start()
+        processes.append(p)
+    
+    # Start consumers
+    for _ in range(num_consumers):
+        p = Process(target=process_kafka_document, args=(output_dir,))
+        p.start()
+        processes.append(p)
+    
+    try:
+        for p in processes:
+            p.join()
+    except KeyboardInterrupt:
+        print("Shutting down...")
+        for p in processes:
+            p.terminate()
+            p.join()
+
+
 if __name__ == "__main__":
-    if len(sys.argv) != 3:
-        print("Usage: python main.py <input_directory> <output_directory>")
-        sys.exit(1)
-
-    input_dir = sys.argv[1]
-    output_dir = sys.argv[2]
-
-    process_documents_parallel(input_dir, output_dir)
+    import argparse
+    parser = argparse.ArgumentParser(description="Document processing pipeline")
+    parser.add_argument('input_dir', help="Input directory")
+    parser.add_argument('output_dir', help="Output directory")
+    parser.add_argument('--kafka', action='store_true', help="Use Kafka pipeline")
+    parser.add_argument('--num-producers', type=int, default=2, help="Number of producer processes")
+    parser.add_argument('--num-consumers', type=int, default=8, help="Number of consumer processes")
+    
+    args = parser.parse_args()
+    
+    if args.kafka:
+        print("Starting Kafka pipeline...")
+        run_kafka_pipeline(args.input_dir, args.output_dir, args.num_producers, args.num_consumers)
+    else:
+        process_documents_parallel(args.input_dir, args.output_dir)
